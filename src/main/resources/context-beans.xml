@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xmlns:tx="http://www.springframework.org/schema/tx"
+    xmlns:mvc="http://www.springframework.org/schema/mvc"
+    xsi:schemaLocation="
+        http://www.springframework.org/schema/beans 
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/util 
+        http://www.springframework.org/schema/util/spring-util.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/context 
+        http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!-- 공용 설정 파일 -->
+    <util:properties id="config" location="classpath:*config.ini" />
+
+    <!-- Annotation 기반의 Component Scan 필터(service package 만 검색) -->
+    <context:component-scan base-package="com.portfolio.www">
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Service" />
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Component" />
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Repository" />
+        <context:include-filter type="regex" expression="\.*\.dao\.*" />
+    </context:component-scan>
+
+    <!-- DAO 구현체 역할을 대신 해주는 클래스 기본설정 -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!-- DB에 접속 하기 위해서 설정 -->
+        <property name="dataSource" ref="dataSource" />
+
+        <!-- myBatis 기본 설정 -->
+        <property name="configLocation" value="classpath:mybatis-config.xml" />
+
+        <!-- query 적힌 xml 위치 -->
+        <property name="mapperLocations" value="classpath:sql/SQL.*.xml" />
+
+        <!-- 트랜잭션 관리를 위한 것 -->
+        <property name="transactionFactory">
+            <bean class="org.mybatis.spring.transaction.SpringManagedTransactionFactory" />
+        </property>
+    </bean>
+
+    <!-- DAO 위치를 basePackage로.. -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.portfolio.www.auth.mybatis" />
+    </bean>
+
+    <!-- 트랜잭션 관리를 위한 bean -->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource" />
+    </bean>
+
+    <!-- 이메일 전송을 위한 JavaMailSender 빈 설정 -->
+    <bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
+        <property name="host" value="smtp.naver.com" />
+        <property name="port" value="587" />
+        <property name="username" value="junani0v0@naver.com" />
+        <property name="password" value="Violet260620!" />
+        <property name="javaMailProperties">
+            <props>
+                <prop key="mail.smtp.starttls.enable">true</prop>
+            </props>
+        </property>
+    </bean>
+
+    <!-- 이메일 유틸리티 빈 설정 -->
+    <bean id="emailUtil" class="com.portfolio.www.auth.util.EmailUtil">
+        <property name="mailSender" ref="mailSender" />
+    </bean>
+
+    <!-- Jasypt 설정 -->
+    <bean id="encryptorConfig" class="org.jasypt.encryption.pbe.config.EnvironmentPBEConfig">
+        <property name="algorithm" value="PBEWithMD5AndDES" />
+        <property name="password" value="jun" />
+    </bean>
+
+    <bean id="encryptor" class="org.jasypt.encryption.pbe.StandardPBEStringEncryptor">
+        <property name="config" ref="encryptorConfig" />
+    </bean>
+
+    <bean class="org.jasypt.spring31.properties.EncryptablePropertyPlaceholderConfigurer">
+        <constructor-arg ref="encryptor" />
+        <property name="locations">
+            <list>
+                <!-- application.properties 파일 경로 -->
+                <value>classpath:/application.properties</value>
+            </list>
+        </property>
+    </bean>
+
+</beans>
